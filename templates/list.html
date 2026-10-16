@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ entity.title }}{% endblock %}
+{% block page_title %}{{ entity.title }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>{{ entity.title }}</h1>
+    <p class="muted">
+      {{ total }} record{{ '' if total == 1 else 's' }}{% if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}
+    </p>
+  </div>
+  <div class="header-actions">
+    <form class="search" method="get" action="{{ url_for('list_view', entity_key=entity.key) }}" role="search">
+      <span class="search-icon">{{ icon('search', 17) }}</span>
+      <input type="search" name="q" value="{{ q }}" maxlength="100" placeholder="Search {{ entity.title|lower }}" aria-label="Search {{ entity.title|lower }}">
+      <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+      {% if q %}<a class="btn btn-ghost btn-sm" href="{{ url_for('list_view', entity_key=entity.key) }}">Clear</a>{% endif %}
+    </form>
+    <a class="btn btn-primary" href="{{ url_for('add_view', entity_key=entity.key) }}">{{ icon('plus', 17) }}Add new</a>
+  </div>
+</section>
+
+<section class="card table-card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          {% for col in entity.columns %}
+          <th scope="col"{% if col[2] in ('money', 'int', 'percent') %} class="num"{% endif %}>{{ col[1] }}</th>
+          {% endfor %}
+          <th scope="col" class="actions-col"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set flagged = entity.row_flag and row[entity.row_flag] %}
+        <tr{% if flagged %} class="row-low"{% endif %}>
+          {% for col in entity.columns %}
+          {% set v = row[col[0]] %}
+          {% set kind = col[2] %}
+          <td{% if kind in ('money', 'int', 'percent') %} class="num"{% endif %} data-label="{{ col[1] }}">
+            {%- if kind == 'money' -%}
+              {{ v|money }}
+            {%- elif kind == 'date' -%}
+              {{ v|datefmt }}
+            {%- elif kind == 'percent' -%}
+              {{ v|pct }}
+            {%- elif kind == 'int' -%}
+              {% if v is none %}&mdash;{% else %}{{ v }}{% endif %}
+              {%- if flagged and col[0] == 'Quantity' %} <span class="pill pill-warn">Low</span>{% endif %}
+            {%- elif kind == 'badge' -%}
+              {% if v %}<span class="badge badge-{{ v|slug }}">{{ v }}</span>{% else %}&mdash;{% endif %}
+            {%- elif kind == 'order_link' or kind == 'order_ref' -%}
+              <a class="link-strong" href="{{ url_for('order_detail', order_id=v) }}">#{{ v }}</a>
+            {%- else -%}
+              {% if v is none or v == '' %}&mdash;{% else %}{{ v }}{% endif %}
+            {%- endif -%}
+          </td>
+          {% endfor %}
+          <td class="actions-col">
+            <div class="row-actions">
+              {% if entity.key == 'orders' %}
+              <a class="btn btn-sm btn-ghost" href="{{ url_for('order_detail', order_id=row['id']) }}">{{ icon('eye', 15) }}View</a>
+              {% endif %}
+              <a class="btn btn-sm btn-edit" href="{{ url_for('edit_view', entity_key=entity.key, rid=row['id']) }}">{{ icon('edit', 15) }}Edit</a>
+              <form class="inline-form" method="post" action="{{ url_for('delete_view', entity_key=entity.key, rid=row['id']) }}" onsubmit="return confirm('Delete this {{ entity.singular|lower }}? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-danger">{{ icon('trash', 15) }}Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="pagination" aria-label="Pagination">
+    <span class="muted small">
+      Showing {{ (page - 1) * page_size + 1 }}&ndash;{{ [page * page_size, total]|min }} of {{ total }}
+    </span>
+    <div class="pagination-links">
+      {% if page > 1 %}
+      <a class="page-link" href="{{ url_for('list_view', entity_key=entity.key, q=q or None, page=page - 1) }}" aria-label="Previous page">{{ icon('chevron-left', 16) }}</a>
+      {% endif %}
+      {% for n in range([page - 2, 1]|max, [page + 2, pages]|min + 1) %}
+      <a class="page-link{% if n == page %} active{% endif %}" href="{{ url_for('list_view', entity_key=entity.key, q=q or None, page=n) }}"{% if n == page %} aria-current="page"{% endif %}>{{ n }}</a>
+      {% endfor %}
+      {% if page < pages %}
+      <a class="page-link" href="{{ url_for('list_view', entity_key=entity.key, q=q or None, page=page + 1) }}" aria-label="Next page">{{ icon('chevron-right', 16) }}</a>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    {{ icon('inbox', 36) }}
+    <p>No records found.</p>
+    {% if q %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('list_view', entity_key=entity.key) }}">Clear search</a>
+    {% else %}
+    <a class="btn btn-primary btn-sm" href="{{ url_for('add_view', entity_key=entity.key) }}">Add the first {{ entity.singular|lower }}</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

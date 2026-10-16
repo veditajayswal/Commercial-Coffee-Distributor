@@ -1,0 +1,85 @@
+{% from "_icons.html" import icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} · Commercial Coffee Distributors</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      <span class="brand-mark">{{ icon('coffee', 22) }}</span>
+      <span class="brand-text">
+        <strong>Commercial Coffee</strong>
+        <small>Distributors</small>
+      </span>
+    </a>
+
+    <nav class="nav">
+      <p class="nav-label">Overview</p>
+      <a class="nav-link{% if active_key == 'dashboard' %} active{% endif %}" href="{{ url_for('dashboard') }}"{% if active_key == 'dashboard' %} aria-current="page"{% endif %}>
+        {{ icon('dashboard', 19) }}<span>Dashboard</span>
+      </a>
+
+      <p class="nav-label">Manage</p>
+      {% for item in nav_items %}
+      <a class="nav-link{% if active_key == item.key %} active{% endif %}" href="{{ url_for('list_view', entity_key=item.key) }}"{% if active_key == item.key %} aria-current="page"{% endif %}>
+        {{ icon(item.icon, 19) }}<span>{{ item.title }}</span>
+      </a>
+      {% endfor %}
+
+      <p class="nav-label">Insights</p>
+      <a class="nav-link{% if active_key == 'reports' %} active{% endif %}" href="{{ url_for('reports') }}"{% if active_key == 'reports' %} aria-current="page"{% endif %}>
+        {{ icon('chart', 19) }}<span>Reports</span>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button type="button" class="icon-btn menu-toggle" id="menu-toggle" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
+        {{ icon('menu', 22) }}
+      </button>
+      <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+      <a class="btn btn-primary btn-sm topbar-action" href="{{ url_for('add_view', entity_key='orders') }}">
+        {{ icon('plus', 16) }}<span>New order</span>
+      </a>
+      <form class="inline-form" method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-ghost btn-sm logout-btn">{{ icon('logout', 16) }}<span>Log out</span></button>
+      </form>
+      
+    </header>
+
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-stack">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+          {{ icon('check' if category == 'success' else 'alert', 18) }}
+          <span>{{ message }}</span>
+          <button type="button" class="alert-close" aria-label="Dismiss message">{{ icon('x', 16) }}</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+      <span>&copy; {{ current_year }} Commercial Coffee Distributors</span>
+    </footer>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html> 

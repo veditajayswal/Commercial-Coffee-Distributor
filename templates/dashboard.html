@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <span class="kicker">Operations ledger</span>
+    <h1>Dashboard</h1>
+    <p class="muted">Live overview of sales, orders and stock.</p>
+  </div>
+  <div class="header-actions">
+    <a class="btn btn-primary" href="{{ url_for('add_view', entity_key='orders') }}">{{ icon('plus', 17) }}New order</a>
+    <a class="btn btn-secondary" href="{{ url_for('add_view', entity_key='payments') }}">{{ icon('card', 17) }}Record payment</a>
+  </div>
+</section>
+
+<section class="stat-grid" aria-label="Key figures">
+  <article class="stat-card stat-espresso">
+    <div class="stat-icon">{{ icon('money', 22) }}</div>
+    <div class="stat-body">
+      <p class="stat-label">Total sales</p>
+      <p class="stat-value">{{ stats.total_sales|money }}</p>
+      <p class="stat-note">All orders except cancelled</p>
+    </div>
+  </article>
+
+  <article class="stat-card stat-sage">
+    <div class="stat-icon">{{ icon('card', 22) }}</div>
+    <div class="stat-body">
+      <p class="stat-label">Payments received</p>
+      <p class="stat-value">{{ stats.payments_received|money }}</p>
+      <p class="stat-note">Completed payments only</p>
+    </div>
+  </article>
+
+  <a class="stat-card stat-caramel stat-link" href="{{ url_for('list_view', entity_key='orders', q='Pending') }}">
+    <div class="stat-icon">{{ icon('clock', 22) }}</div>
+    <div class="stat-body">
+      <p class="stat-label">Pending orders</p>
+      <p class="stat-value">{{ stats.pending_orders }}</p>
+      <p class="stat-note">View pending orders</p>
+    </div>
+  </a>
+
+  <a class="stat-card stat-link {% if stats.low_stock_count %}stat-alert{% else %}stat-sage{% endif %}" href="{{ url_for('list_view', entity_key='inventory') }}">
+    <div class="stat-icon">{{ icon('alert', 22) }}</div>
+    <div class="stat-body">
+      <p class="stat-label">Low-stock items</p>
+      <p class="stat-value">{{ stats.low_stock_count }}</p>
+      <p class="stat-note">At or below reorder level</p>
+    </div>
+  </a>
+</section>
+
+<section class="dash-grid">
+  <article class="card table-card">
+    <div class="card-head">
+      <div>
+        <h2>Recent orders</h2>
+        <span class="card-sub">Latest eight by order date</span>
+      </div>
+      <a class="link-strong" href="{{ url_for('list_view', entity_key='orders') }}">View all</a>
+    </div>
+    {% if recent_orders %}
+    <div class="table-wrap">
+      <table class="data-table compact">
+        <thead>
+          <tr>
+            <th scope="col">Order</th>
+            <th scope="col">Customer</th>
+            <th scope="col">Date</th>
+            <th scope="col" class="num">Total</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in recent_orders %}
+          <tr>
+            <td data-label="Order"><a class="link-strong" href="{{ url_for('order_detail', order_id=o['id']) }}">#{{ o['id'] }}</a></td>
+            <td data-label="Customer">
+              <span class="cell-main">{{ o['CustomerName'] }}</span>
+              <span class="cell-sub">{{ o['CompanyName'] }}</span>
+            </td>
+            <td data-label="Date">{{ o['OrderDate']|datefmt }}</td>
+            <td class="num" data-label="Total">{{ o['TotalAmount']|money }}</td>
+            <td data-label="Status">
+              {% if o['Status'] %}<span class="badge badge-{{ o['Status']|slug }}">{{ o['Status'] }}</span>{% else %}&mdash;{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      {{ icon('inbox', 34) }}
+      <p>No orders yet.</p>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('add_view', entity_key='orders') }}">Create the first order</a>
+    </div>
+    {% endif %}
+  </article>
+
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h2>Low-stock alerts</h2>
+        <span class="card-sub">Quantity against reorder level</span>
+      </div>
+      <a class="link-strong" href="{{ url_for('list_view', entity_key='inventory') }}">Inventory</a>
+    </div>
+    {% if low_stock %}
+    <ul class="alert-list">
+      {% for item in low_stock %}
+      <li class="alert-item">
+        <div class="alert-item-icon">{{ icon('alert', 18) }}</div>
+        <div class="alert-item-body">
+          <span class="cell-main">{{ item['ProductName'] }}</span>
+          <span class="cell-sub">{{ item['CompanyName'] }}{% if item['WarehouseLocation'] %} &middot; {{ item['WarehouseLocation'] }}{% endif %}</span>
+        </div>
+        <div class="alert-item-qty">
+          <strong>{{ item['Quantity'] }}</strong>
+          <span>of {{ item['ReorderLevel'] }}</span>
+        </div>
+        <a class="icon-btn" href="{{ url_for('edit_view', entity_key='inventory', rid=item['id']) }}" aria-label="Update stock for {{ item['ProductName'] }}">{{ icon('edit', 17) }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state empty-ok">
+      {{ icon('check', 34) }}
+      <p>All stock levels are above their reorder level.</p>
+    </div>
+    {% endif %}
+  </article>
+</section>
+
+<section class="dash-grid dash-grid-even">
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h2>Orders by status</h2>
+        <span class="card-sub">Share of all orders</span>
+      </div>
+    </div>
+    {% if status_breakdown %}
+    <ul class="progress-list">
+      {% for s in status_breakdown %}
+      <li>
+        <div class="progress-row">
+          {% if s.status %}<span class="badge badge-{{ s.status|slug }}">{{ s.status }}</span>{% else %}<span class="badge">Unspecified</span>{% endif %}
+          <span class="progress-meta">{{ s.count }} &middot; {{ s.pct }}%</span>
+        </div>
+        <div class="progress">
+          <div class="progress-fill progress-{{ s.status|slug }}" style="width: {{ s.pct }}%"></div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+      {{ icon('inbox', 34) }}
+      <p>No order data to summarise.</p>
+    </div>
+    {% endif %}
+  </article>
+
+  <article class="card">
+    <div class="card-head">
+      <div>
+        <h2>Monthly sales</h2>
+        <span class="card-sub">Last 6 months with orders, excluding cancelled</span>
+      </div>
+    </div>
+    {% if monthly_sales %}
+    <div class="bar-chart" role="img" aria-label="Monthly sales totals">
+      {% for m in monthly_sales %}
+      <div class="bar-col">
+        <span class="bar-value">{{ m.total|money }}</span>
+        <div class="bar-track"><div class="bar-fill" style="height: {{ m.pct }}%"></div></div>
+        <span class="bar-label">{{ m.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      {{ icon('inbox', 34) }}
+      <p>No sales data to chart.</p>
+    </div>
+    {% endif %}
+  </article>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Records overview</h2>
+      <span class="card-sub">Row counts for all nine tables</span>
+    </div>
+  </div>
+  <div class="tile-grid">
+    {% for c in counts %}
+    <a class="tile" href="{{ url_for('list_view', entity_key=c.key) }}">
+      <span class="tile-icon">{{ icon(c.icon, 20) }}</span>
+      <span class="tile-count">{{ c.count }}</span>
+      <span class="tile-title">{{ c.title }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

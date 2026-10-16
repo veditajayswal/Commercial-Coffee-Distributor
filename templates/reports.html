@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>Reports</h1>
+    <p class="muted">Read-only query results from the live database.</p>
+  </div>
+</section>
+
+<nav class="report-nav" aria-label="Report index">
+  {% for rep in reports %}
+  <a class="report-chip" href="#report-{{ loop.index }}">{{ loop.index }}. {{ rep.title }}</a>
+  {% endfor %}
+</nav>
+
+{% for rep in reports %}
+<section class="card table-card report-card" id="report-{{ loop.index }}">
+  <div class="card-head">
+    <h2>{{ loop.index }}. {{ rep.title }}</h2>
+    <span class="report-feature">{{ rep.feature }}</span>
+  </div>
+  {% if rep.rows %}
+  <div class="table-wrap">
+    <table class="data-table compact">
+      <thead>
+        <tr>
+          {% for col in rep.columns %}
+          <th scope="col"{% if col[2] in ('money', 'int') %} class="num"{% endif %}>{{ col[1] }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rep.rows %}
+        <tr>
+          {% for col in rep.columns %}
+          {% set v = row[col[0]] %}
+          <td{% if col[2] in ('money', 'int') %} class="num"{% endif %} data-label="{{ col[1] }}">
+            {%- if col[2] == 'money' -%}
+              {{ v|money }}
+            {%- elif col[2] == 'badge' -%}
+              {% if v %}<span class="badge badge-{{ v|slug }}">{{ v }}</span>{% else %}&mdash;{% endif %}
+            {%- elif col[2] == 'int' -%}
+              {% if v is none %}&mdash;{% else %}{{ v }}{% endif %}
+            {%- else -%}
+              {% if v is none or v == '' %}&mdash;{% else %}{{ v }}{% endif %}
+            {%- endif -%}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    {{ icon('inbox', 34) }}
+    <p>No data for this report.</p>
+  </div>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Order #{{ order.OrderID }}{% endblock %}
+{% block page_title %}Orders{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>Order #{{ order.OrderID }}
+      {% if order.Status %}<span class="badge badge-{{ order.Status|slug }}">{{ order.Status }}</span>{% endif %}
+    </h1>
+    <p class="muted">{{ order.CustomerName }} &middot; {{ order.CompanyName }}</p>
+  </div>
+  <div class="header-actions">
+    <a class="btn btn-ghost" href="{{ url_for('list_view', entity_key='orders') }}">{{ icon('arrow-left', 17) }}All orders</a>
+    <a class="btn btn-edit" href="{{ url_for('edit_view', entity_key='orders', rid=order.OrderID) }}">{{ icon('edit', 17) }}Edit order</a>
+    <form class="inline-form" method="post" action="{{ url_for('delete_view', entity_key='orders', rid=order.OrderID) }}" onsubmit="return confirm('Delete order #{{ order.OrderID }}? This cannot be undone.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger">{{ icon('trash', 17) }}Delete</button>
+    </form>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Order summary</h2></div>
+  <dl class="summary-grid">
+    <div class="summary-item"><dt>Customer</dt><dd>{{ order.CustomerName }}</dd></div>
+    <div class="summary-item"><dt>Company</dt><dd>{{ order.CompanyName }}</dd></div>
+    <div class="summary-item"><dt>Order date</dt><dd>{{ order.OrderDate|datefmt }}</dd></div>
+    <div class="summary-item"><dt>Delivery date</dt><dd>{{ order.DeliveryDate|datefmt }}</dd></div>
+    <div class="summary-item"><dt>Status</dt><dd>{% if order.Status %}<span class="badge badge-{{ order.Status|slug }}">{{ order.Status }}</span>{% else %}&mdash;{% endif %}</dd></div>
+    <div class="summary-item"><dt>Order total</dt><dd>{{ order.TotalAmount|money }}</dd></div>
+  </dl>
+</section>
+
+<section class="card table-card">
+  <div class="card-head">
+    <h2>Items</h2>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('add_view', entity_key='order-items', OrderID=order.OrderID) }}">{{ icon('plus', 16) }}Add item</a>
+  </div>
+  {% if items %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">Product</th>
+          <th scope="col" class="num">Qty</th>
+          <th scope="col" class="num">Unit price</th>
+          <th scope="col" class="num">Discount</th>
+          <th scope="col" class="num">Line total</th>
+          <th scope="col" class="actions-col"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td data-label="Product">{{ it.ProductName }}</td>
+          <td class="num" data-label="Qty">{{ it.Quantity }}</td>
+          <td class="num" data-label="Unit price">{{ it.UnitPrice|money }}</td>
+          <td class="num" data-label="Discount">{{ it.Discount|pct }}</td>
+          <td class="num" data-label="Line total">{{ it.LineTotal|money }}</td>
+          <td class="actions-col">
+            <div class="row-actions">
+              <a class="btn btn-sm btn-edit" href="{{ url_for('edit_view', entity_key='order-items', rid=it.id) }}">{{ icon('edit', 15) }}Edit</a>
+              <form class="inline-form" method="post" action="{{ url_for('delete_view', entity_key='order-items', rid=it.id) }}" onsubmit="return confirm('Delete this order item? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="order">
+                <button type="submit" class="btn btn-sm btn-danger">{{ icon('trash', 15) }}Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" colspan="4" class="num">Order total</th>
+          <td class="num" data-label="Order total">{{ order.TotalAmount|money }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    {{ icon('inbox', 34) }}
+    <p>This order has no items yet.</p>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('add_view', entity_key='order-items', OrderID=order.OrderID) }}">Add the first item</a>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card table-card">
+  <div class="card-head">
+    <h2>Payments</h2>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('add_view', entity_key='payments', OrderID=order.OrderID) }}">{{ icon('plus', 16) }}Record payment</a>
+  </div>
+
+  <div class="money-summary">
+    <div class="money-box">
+      <span>Order total</span>
+      <strong>{{ order.TotalAmount|money }}</strong>
+    </div>
+    <div class="money-box">
+      <span>Paid (completed)</span>
+      <strong>{{ total_paid|money }}</strong>
+    </div>
+    <div class="money-box {{ 'balance-due' if balance > 0 else 'balance-clear' }}">
+      <span>{% if balance > 0 %}Balance due{% elif balance < 0 %}Overpaid{% else %}Balance{% endif %}</span>
+      <strong>{{ balance|abs|money }}</strong>
+    </div>
+  </div>
+
+  {% if payments %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col" class="num">Amount</th>
+          <th scope="col">Method</th>
+          <th scope="col">Status</th>
+          <th scope="col">Reference</th>
+          <th scope="col" class="actions-col"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td data-label="Date">{{ p.PaymentDate|datefmt }}</td>
+          <td class="num" data-label="Amount">{{ p.Amount|money }}</td>
+          <td data-label="Method">{% if p.PaymentMethod %}{{ p.PaymentMethod }}{% else %}&mdash;{% endif %}</td>
+          <td data-label="Status">{% if p.Status %}<span class="badge badge-{{ p.Status|slug }}">{{ p.Status }}</span>{% else %}&mdash;{% endif %}</td>
+          <td data-label="Reference">{% if p.ReferenceNo %}{{ p.ReferenceNo }}{% else %}&mdash;{% endif %}</td>
+          <td class="actions-col">
+            <div class="row-actions">
+              <a class="btn btn-sm btn-edit" href="{{ url_for('edit_view', entity_key='payments', rid=p.id) }}">{{ icon('edit', 15) }}Edit</a>
+              <form class="inline-form" method="post" action="{{ url_for('delete_view', entity_key='payments', rid=p.id) }}" onsubmit="return confirm('Delete this payment? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="order">
+                <button type="submit" class="btn btn-sm btn-danger">{{ icon('trash', 15) }}Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    {{ icon('inbox', 34) }}
+    <p>No payments recorded for this order.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

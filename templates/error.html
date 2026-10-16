@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<section class="card error-card">
+  <div class="error-code">{{ code }}</div>
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ message }}</p>
+  <div class="header-actions error-actions">
+    <a class="btn btn-primary" href="{{ url_for('dashboard') }}">{{ icon('dashboard', 17) }}Dashboard</a>
+    <button type="button" class="btn btn-secondary" onclick="history.back()">{{ icon('arrow-left', 17) }}Go back</button>
+  </div>
+</section>
+{% endblock %}
