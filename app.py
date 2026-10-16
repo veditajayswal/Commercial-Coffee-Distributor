@@ -243,7 +243,7 @@ def create_app():
     validate_config()
     app = Flask(__name__)
     app.config.from_object(Config)
-    app.config["CURRENCY_SYMBOL"] = os.environ.get("CURRENCY_SYMBOL", "$")
+    app.config["CURRENCY_SYMBOL"] = os.environ.get("CURRENCY_SYMBOL", "₹")
     app.teardown_appcontext(close_db)
     logging.basicConfig(level=logging.INFO)
         # ---- authentication gate
@@ -505,6 +505,13 @@ def create_app():
                         new_id = insert_row(entity["table"], data)
                     else:
                         update_row(entity["table"], entity["pk"], rid, data)
+                        if entity["key"] == "products":
+                            execute("UPDATE OrderItems SET UnitPrice = %s, "
+                                    "LineTotal = ROUND(Quantity * %s * (100 - Discount) / 100, 2) "
+                                    "WHERE ProductID = %s", [data["Price"], data["Price"], rid])
+                            execute("UPDATE Orders o SET TotalAmount = (SELECT COALESCE(SUM(LineTotal),0) "
+                                    "FROM OrderItems WHERE OrderID = o.OrderID) "
+                                    "WHERE o.OrderID IN (SELECT OrderID FROM OrderItems WHERE ProductID = %s)", [rid])
                     if entity["key"] == "order-items":
                         recalc_order_total(data["OrderID"])
                         if existing is not None and existing["OrderID"] != data["OrderID"]:

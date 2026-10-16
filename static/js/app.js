@@ -115,9 +115,19 @@
     });
   }
 
-  var calcInputs = form.querySelectorAll("input[data-calc]");
-  for (var j = 0; j < calcInputs.length; j++) {
-    calcInputs[j].addEventListener("input", updateTotal);
+  if (qtyInput) {
+    qtyInput.addEventListener("input", updateTotal);
+    qtyInput.addEventListener("change", updateTotal);
+  }
+
+  if (priceTarget) {
+    priceTarget.addEventListener("input", updateTotal);
+    priceTarget.addEventListener("change", updateTotal);
+  }
+
+  if (discountInput) {
+    discountInput.addEventListener("input", updateTotal);
+    discountInput.addEventListener("change", updateTotal);
   }
 
   fillPrice(true);
